@@ -34,5 +34,29 @@
         {% endif %}
     </main>
 
+    <script>
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'PrintScreen' || e.keyCode === 44) {
+                navigator.clipboard.writeText(''); 
+                alert('عفواً، أخذ لقطة شاشة غير مسموح لحماية حقوق الملكية.');
+            }
+            if (e.keyCode === 123) { e.preventDefault(); }
+            if (e.ctrlKey && e.shiftKey && e.keyCode === 73) { e.preventDefault(); }
+            if (e.ctrlKey && e.keyCode === 85) { e.preventDefault(); }
+            if (e.ctrlKey && e.keyCode === 83) { e.preventDefault(); }
+            if (e.ctrlKey && e.keyCode === 80) { e.preventDefault(); }
+            if (e.ctrlKey && e.keyCode === 67) { e.preventDefault(); }
+        });
+
+        window.addEventListener('blur', function() {
+            document.body.classList.add('blur-protect');
+        });
+
+        window.addEventListener('focus', function() {
+            document.body.classList.remove('blur-protect');
+        });
+    </script>
 </body>
 </html>
