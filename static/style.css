@@ -189,3 +189,16 @@ img {
     filter: blur(15px) !important;
     transition: 0.1s;
 }
+
+/* =========================================================
+   طبقة العلامة المائية التلقائية لحماية الصور من السكرين شوت
+   ========================================================= */
+.watermark-protection {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ctext x='20' y='100' fill='rgba(255, 255, 255, 0.15)' font-weight='bold' font-size='20' font-family='Arial' transform='rotate(-45 100 100)'%3EAhmed Othman%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 180px 180px;
+    pointer-events: none; /* يضمن أن الطبقة لا تمنع الضغط على الصورة لفتحها */
+    z-index: 5;
+}
