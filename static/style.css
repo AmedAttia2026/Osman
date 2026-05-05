@@ -108,23 +108,20 @@ body { background: var(--bg-main); color: var(--text-main); display: flex; flex-
 .file-drop:hover { border-color: var(--gold); background: rgba(255,179,0,0.05);}
 .file-drop i { font-size: 2.5rem; color: var(--gold); }
 
-/* أزرار الإدارة */
 .btn-gold { padding: 14px 20px; background: linear-gradient(135deg, var(--gold) 0%, #ffe082 100%); color: #000; font-weight: 900; border: none; border-radius: 10px; font-size: 1rem; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; gap: 8px; transition: 0.3s;}
 .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 5px 15px var(--gold-glow); }
 .btn-outline-gold { border: 1px solid var(--gold); color: var(--gold); padding: 10px 20px; border-radius: 10px; text-decoration: none; font-weight: bold; transition: 0.3s; display: inline-flex; align-items: center; gap: 8px;}
 .btn-outline-gold:hover { background: var(--gold); color: #000; }
 .btn-outline-red { border: 1px solid #EF4444; color: #EF4444; padding: 10px 20px; border-radius: 10px; text-decoration: none; font-weight: bold; transition: 0.3s; display: inline-flex; align-items: center; gap: 8px;}
 .btn-outline-red:hover { background: #EF4444; color: #fff; }
+
+.btn-red { background: rgba(239,68,68,0.1); color: #EF4444; border: 1px solid #EF4444; padding: 10px 20px; border-radius: 10px; cursor: pointer; transition: 0.3s; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;}
+.btn-red:hover { background: #EF4444; color: #fff; }
+
 .btn-edit { background: rgba(59,130,246,0.1); color: #3B82F6; border: 1px solid #3B82F6; padding: 10px 20px; border-radius: 10px; cursor: pointer; transition: 0.3s; position: relative; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;}
 .btn-edit input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;}
 .btn-edit:hover { background: #3B82F6; color: #fff; }
 
-.btn-del-circle { width: 45px; height: 45px; border-radius: 50%; background: rgba(239,68,68,0.2); color: #EF4444; border: 1px solid #EF4444; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; transition: 0.3s; padding: 0; }
-.btn-del-circle:hover { background: #EF4444; color: #fff; transform: scale(1.1); }
-.btn-red { background: rgba(239,68,68,0.1); color: #EF4444; border: 1px solid #EF4444; padding: 10px 20px; border-radius: 10px; cursor: pointer; transition: 0.3s; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;}
-.btn-red:hover { background: #EF4444; color: #fff; }
-
-/* كروت الألبومات في لوحة التحكم */
 .albums-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
 .album-card { padding: 0 !important; overflow: hidden; display: flex; flex-direction: column; gap: 0 !important; border: 1px solid var(--border-light); }
 .album-cover-container { position: relative; width: 100%; height: 220px; overflow: hidden; }
@@ -139,26 +136,56 @@ body { background: var(--bg-main); color: var(--text-main); display: flex; flex-
 
 .edit-name-btn { background: rgba(255, 179, 0, 0.05); border: 1px solid rgba(255, 179, 0, 0.2); color: var(--gold); font-size: 1rem; cursor: pointer; transition: 0.3s; width: 35px; height: 35px; border-radius: 8px; display: flex; justify-content: center; align-items: center;}
 .edit-name-btn:hover { background: var(--gold); color: #000; transform: translateY(-3px); box-shadow: 0 5px 15px var(--gold-glow);}
-
 .album-actions { display: flex; gap: 10px; width: 100%; align-items: center;}
 .icon-btn { padding: 10px 15px; font-size: 1.1rem; border-radius: 10px; display: flex; justify-content: center; align-items: center;}
 
-/* رفع البانر المدمج */
 .upload-inline-form { display: flex; gap: 15px; align-items: stretch; flex-wrap: wrap; }
 .input-file-wrapper { flex: 1; position: relative; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; align-items: center; gap: 10px; }
 .admin-input-file { width: 100%; color: var(--text-sub); }
 .banner-preview { width: 100%; height: 150px; border-radius: 12px; overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border); }
 .banner-preview img { width: 100%; height: 100%; object-fit: cover; }
 
-/* ترتيب الصور */
 .sortable-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
 .sort-item { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); cursor: grab;}
 .sort-item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none;}
 .sort-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; opacity: 0; transition: 0.3s;}
 .sort-item:hover .sort-overlay { opacity: 1; }
 
+.btn-del-circle { width: 45px; height: 45px; border-radius: 50%; background: rgba(239,68,68,0.2); color: #EF4444; border: 1px solid #EF4444; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; transition: 0.3s; padding: 0; }
+.btn-del-circle:hover { background: #EF4444; color: #fff; transform: scale(1.1); }
+
 .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 99999; justify-content: center; align-items: center; backdrop-filter: blur(10px);}
 .lightbox img { max-width: 95%; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 40px #000; animation: zoom 0.3s ease; }
 .close-lb { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 40px; cursor: pointer; z-index: 1000;}
 @keyframes zoom { from {transform: scale(0.9); opacity:0;} to {transform: scale(1); opacity:1;} }
 .swal2-popup { background: var(--bg-card) !important; color: #fff !important; border: 1px solid var(--border-light) !important; border-radius: 20px !important; box-shadow: 0 20px 50px rgba(0,0,0,0.8) !important;}
+
+/* =========================================================
+   حماية الصور وحقوق الملكية (إضافات الأمان)
+   ========================================================= */
+body {
+    -webkit-user-select: none; /* منع تحديد النص */
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+img {
+    -webkit-user-drag: none; /* منع سحب الصورة */
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    pointer-events: none; /* منع أي تفاعل مع الصورة كليك يمين أو غيره */
+    -webkit-touch-callout: none; /* منع القائمة المنبثقة عند الضغط المطول في الهواتف */
+}
+
+/* استثناء صور لوحة الإدارة من الحماية للتحكم المريح */
+.admin-container img, .login-wrapper img {
+    pointer-events: auto;
+}
+
+/* كلاس التشويش الذي يعمل عند محاولة تصوير الشاشة */
+.blur-protect {
+    filter: blur(15px) !important;
+    transition: 0.1s;
+}
