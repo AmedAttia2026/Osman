@@ -25,7 +25,7 @@
             <h2 class="card-heading"><i class="fas fa-image"></i> صورة البانر الرئيسية (الهيدر)</h2>
             {% if banner %}
                 <div class="banner-preview">
-                    <img src="{{ url_for('static', filename='uploads/' + banner) }}" alt="Banner">
+                    <img src="data:image/jpeg;base64,{{ banner }}" alt="Banner">
                 </div>
             {% endif %}
             <form method="POST" action="{{ url_for('update_banner') }}" enctype="multipart/form-data" class="upload-inline-form">
@@ -55,10 +55,10 @@
             {% for cat in categories %}
                 <div class="admin-card lux-card album-card">
                     <div class="album-cover-container">
-                        <img src="{{ url_for('static', filename='uploads/' + cat['_id'] + '/' + cat['cover']) }}" alt="Cover">
+                        <img src="data:image/jpeg;base64,{{ cat['cover_base64'] }}" alt="Cover">
                         <div class="album-cover-overlay"></div>
                         <div class="album-badge">
-                            <i class="fas fa-images"></i> {{ cat['images']|length if cat.get('images') else 0 }} صور
+                            <i class="fas fa-images"></i> {{ cat.get('images', [])|length }} صور
                         </div>
                     </div>
                     
@@ -76,10 +76,10 @@
                                 </button>
                             </form>
                             
-                            <a href="{{ url_for('admin_category', cat_id=cat['_id']) }}" class="btn-gold action-btn-text"><i class="fas fa-cog"></i> إدارة الصور</a>
+                            <a href="{{ url_for('admin_category', cat_id=cat['_id']) }}" class="btn-gold action-btn-text" style="flex:1;"><i class="fas fa-cog"></i> الإدارة</a>
                             
                             <form id="del-{{ cat['_id'] }}" action="{{ url_for('delete_category', cat_id=cat['_id']) }}" method="POST" style="display:none;"></form>
-                            <button class="btn-red icon-btn" onclick="confirmDel('del-{{ cat['_id'] }}', 'هل متأكد من مسح هذا القسم بالكامل أم لا؟')" title="حذف القسم"><i class="fas fa-trash"></i></button>
+                            <button class="btn-red icon-btn" onclick="confirmDel('del-{{ cat['_id'] }}', 'هل متأكد من مسح هذا القسم بالكامل؟')" title="حذف القسم"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 </div>
