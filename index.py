@@ -1,26 +1,14 @@
 import os
 import time
 import urllib.parse
+import base64
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
 from pymongo import MongoClient
 
 app = Flask(__name__)
 # مفتاح سري لتشفير الجلسات
 app.secret_key = os.urandom(32).hex()
-
-# إعدادات المجلدات لرفع الصور (محلياً)
-UPLOAD_BASE = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
-
-# ==========================================
-# حل مشكلة انهيار سيرفر Vercel (Read-Only Filesystem)
-# ==========================================
-try:
-    os.makedirs(UPLOAD_BASE, exist_ok=True)
-except OSError:
-    print("تحذير: السيرفر يعمل على بيئة للقراءة فقط (مثل Vercel).")
 
 # ==========================================
 # إعدادات MongoDB Atlas (تشفير الباسورد)
@@ -46,12 +34,14 @@ except Exception as e:
 ADMIN_USERNAME = "Admin"
 ADMIN_PASSWORD_HASH = generate_password_hash("Ahmed123") # كلمة المرور للدخول هي: Ahmed123
 
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_main_banner():
     doc = settings_col.find_one({"_id": "main_banner"})
-    return doc.get("filename", "") if doc else ""
+    return doc.get("base64_data", "") if doc else ""
 
 # ==========================================
 # 1. واجهة الزوار (الرئيسية والأقسام)
@@ -88,7 +78,7 @@ def logout():
     return redirect(url_for('index'))
 
 # ==========================================
-# 3. لوحة الإدارة (الأدمن)
+# 3. لوحة الإدارة (الحفظ بصيغة Base64 في MongoDB)
 # ==========================================
 @app.route('/admin')
 def admin():
@@ -103,18 +93,8 @@ def update_banner():
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
     file = request.files.get('banner_image')
     if file and allowed_file(file.filename):
-        filename = f"banner_{int(time.time())}_{secure_filename(file.filename)}"
-        try:
-            file.save(os.path.join(UPLOAD_BASE, filename))
-        except OSError:
-            pass # تجاهل خطأ الحفظ المحلي على Vercel
-        
-        old_banner = get_main_banner()
-        if old_banner and os.path.exists(os.path.join(UPLOAD_BASE, old_banner)):
-            try: os.remove(os.path.join(UPLOAD_BASE, old_banner))
-            except: pass
-            
-        settings_col.update_one({"_id": "main_banner"}, {"$set": {"filename": filename}}, upsert=True)
+        encoded_string = base64.b64encode(file.read()).decode('utf-8')
+        settings_col.update_one({"_id": "main_banner"}, {"$set": {"base64_data": encoded_string}}, upsert=True)
         flash('تم تحديث صورة الهيدر بنجاح!', 'success')
     return redirect(url_for('admin'))
 
@@ -127,16 +107,8 @@ def add_category():
     
     if cat_name and file and allowed_file(file.filename):
         cat_id = f"cat_{int(time.time())}"
-        cat_path = os.path.join(UPLOAD_BASE, cat_id)
-        
-        try:
-            os.makedirs(cat_path, exist_ok=True)
-            cover_name = f"cover_{int(time.time())}_{secure_filename(file.filename)}"
-            file.save(os.path.join(cat_path, cover_name))
-        except OSError:
-            cover_name = f"cover_{int(time.time())}_{secure_filename(file.filename)}" # في حالة Vercel
-        
-        categories_col.insert_one({"_id": cat_id, "name": cat_name, "cover": cover_name, "images": []})
+        encoded_cover = base64.b64encode(file.read()).decode('utf-8')
+        categories_col.insert_one({"_id": cat_id, "name": cat_name, "cover_base64": encoded_cover, "images": []})
         flash('تم إنشاء الألبوم بنجاح!', 'success')
     return redirect(url_for('admin'))
 
@@ -155,25 +127,9 @@ def edit_category_name(cat_id):
 def edit_cover(cat_id):
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
     file = request.files.get('new_cover')
-    cat_info = categories_col.find_one({"_id": cat_id})
-    
-    if cat_info and file and allowed_file(file.filename):
-        cat_path = os.path.join(UPLOAD_BASE, cat_id)
-        
-        old_cover = cat_info.get("cover", "")
-        if old_cover and os.path.exists(os.path.join(cat_path, old_cover)):
-            try: os.remove(os.path.join(cat_path, old_cover))
-            except: pass
-            
-        cover_name = f"cover_{int(time.time())}_{secure_filename(file.filename)}"
-        
-        try:
-            os.makedirs(cat_path, exist_ok=True)
-            file.save(os.path.join(cat_path, cover_name))
-        except OSError:
-            pass # Vercel
-        
-        categories_col.update_one({"_id": cat_id}, {"$set": {"cover": cover_name}})
+    if file and allowed_file(file.filename):
+        encoded_cover = base64.b64encode(file.read()).decode('utf-8')
+        categories_col.update_one({"_id": cat_id}, {"$set": {"cover_base64": encoded_cover}})
         flash('تم تحديث الغلاف بنجاح!', 'success')
     return redirect(url_for('admin'))
 
@@ -186,7 +142,7 @@ def delete_category(cat_id):
     return redirect(url_for('admin'))
 
 # ==========================================
-# 4. إدارة صور الألبوم الداخلي
+# 4. إدارة صور الألبوم الداخلي (الحفظ كـ Base64)
 # ==========================================
 @app.route('/admin/category/<cat_id>')
 def admin_category(cat_id):
@@ -199,34 +155,23 @@ def admin_category(cat_id):
 def upload_images(cat_id):
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
     files = request.files.getlist('files')
-    cat_path = os.path.join(UPLOAD_BASE, cat_id)
     
-    uploaded_names = []
+    encoded_images = []
     for file in files:
         if file and allowed_file(file.filename):
-            filename = f"img_{int(time.time()*1000)}_{secure_filename(file.filename)}"
-            try:
-                os.makedirs(cat_path, exist_ok=True)
-                file.save(os.path.join(cat_path, filename))
-            except OSError:
-                pass # Vercel
-            uploaded_names.append(filename)
+            encoded_img = base64.b64encode(file.read()).decode('utf-8')
+            encoded_images.append(encoded_img)
             
-    if uploaded_names:
-        categories_col.update_one({"_id": cat_id}, {"$push": {"images": {"$each": uploaded_names}}})
-        flash('تم رفع الصور بنجاح!', 'success')
+    if encoded_images:
+        categories_col.update_one({"_id": cat_id}, {"$push": {"images": {"$each": encoded_images}}})
+        flash('تم رفع الصور وحفظها في الداتا بيز بنجاح!', 'success')
     return redirect(url_for('admin_category', cat_id=cat_id))
 
 @app.route('/admin/delete_image/<cat_id>', methods=['POST'])
 def delete_image(cat_id):
     if not session.get('admin_logged_in'): return jsonify({"status": "error"}), 401
-    filename = request.json.get('filename')
-    categories_col.update_one({"_id": cat_id}, {"$pull": {"images": filename}})
-    
-    filepath = os.path.join(UPLOAD_BASE, cat_id, secure_filename(filename))
-    if os.path.exists(filepath):
-        try: os.remove(filepath)
-        except: pass
+    img_data = request.json.get('filename') # يمثل نص Base64 للصورة
+    categories_col.update_one({"_id": cat_id}, {"$pull": {"images": img_data}})
     return jsonify({"status": "success"})
 
 @app.route('/admin/reorder_images/<cat_id>', methods=['POST'])
