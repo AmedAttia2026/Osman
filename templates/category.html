@@ -10,7 +10,7 @@
 </head>
 <body>
 
-    <header class="top-banner" style="height: 25vh; min-height: 180px; background-image: url('{{ url_for('static', filename='uploads/' + banner) if banner else '' }}');">
+    <header class="top-banner" style="height: 25vh; min-height: 180px; {% if banner %} background-image: url('data:image/jpeg;base64,{{ banner }}'); {% endif %}">
         <div class="banner-text-container">
             <span class="banner-subtitle">Photographer</span>
             <div class="banner-title" style="font-size: clamp(1.8rem, 6vw, 3.5rem);">Ahmed Othman</div>
@@ -23,10 +23,10 @@
     </nav>
 
     <main class="masonry-grid">
-        {% if images %}
-            {% for image in images %}
-                <div class="masonry-item" onclick="openLb('{{ url_for('static', filename='uploads/' + cat_id + '/' + image) }}')">
-                    <img src="{{ url_for('static', filename='uploads/' + cat_id + '/' + image) }}" loading="lazy">
+        {% if cat_info.get('images') %}
+            {% for image in cat_info['images'] %}
+                <div class="masonry-item" onclick="openLb('data:image/jpeg;base64,{{ image }}')">
+                    <img src="data:image/jpeg;base64,{{ image }}" loading="lazy">
                     <div class="zoom-overlay"><i class="fas fa-search-plus"></i></div>
                 </div>
             {% endfor %}
