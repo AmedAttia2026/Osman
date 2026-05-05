@@ -27,6 +27,9 @@
             {% for image in cat_info['images'] %}
                 <div class="masonry-item" onclick="openLb('data:image/jpeg;base64,{{ image }}')">
                     <img src="data:image/jpeg;base64,{{ image }}" loading="lazy">
+                    
+                    <div class="watermark-protection"></div>
+                    
                     <div class="zoom-overlay"><i class="fas fa-search-plus"></i></div>
                 </div>
             {% endfor %}
@@ -38,6 +41,7 @@
     <div id="lightbox" class="lightbox" onclick="this.style.display='none'">
         <span class="close-lb">&times;</span>
         <img id="lb-img" onclick="event.stopPropagation()">
+        <div class="watermark-protection" style="z-index: 100000; position: absolute; inset: 0;"></div>
     </div>
 
     <script>
