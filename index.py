@@ -2,18 +2,19 @@ import os
 import time
 import urllib.parse
 import base64
+import io
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
+from PIL import Image, ImageDraw, ImageFont
 
 app = Flask(__name__)
 # مفتاح سري لتشفير الجلسات
 app.secret_key = os.urandom(32).hex()
 
 # ==========================================
-# إعدادات MongoDB Atlas (تشفير الباسورد)
+# إعدادات MongoDB Atlas 
 # ==========================================
-# تشفير اسم المستخدم وكلمة المرور لتجنب مشاكل الرموز مثل @
 username = urllib.parse.quote_plus('ahmedosman')
 password = urllib.parse.quote_plus('i-fn@bBHV7rXMYj')
 
@@ -24,15 +25,14 @@ try:
     db = client['photographer_portfolio']
     categories_col = db['categories']
     settings_col = db['settings']
-    # اختبار الاتصال
     client.admin.command('ping')
-    print("تم الاتصال بـ MongoDB بنجاح! الباسورد سليم 100%")
+    print("تم الاتصال بـ MongoDB بنجاح!")
 except Exception as e:
     print(f"فشل الاتصال بـ MongoDB: {e}")
 
 # بيانات دخول لوحة الإدارة
 ADMIN_USERNAME = "Admin"
-ADMIN_PASSWORD_HASH = generate_password_hash("Ahmed123") # كلمة المرور للدخول هي: Ahmed123
+ADMIN_PASSWORD_HASH = generate_password_hash("Ahmed123")
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
@@ -44,7 +44,46 @@ def get_main_banner():
     return doc.get("base64_data", "") if doc else ""
 
 # ==========================================
-# 1. واجهة الزوار (الرئيسية والأقسام)
+# دالة دمج العلامة المائية وتحويلها لـ Base64
+# ==========================================
+def add_watermark_and_encode(file_storage):
+    # فتح الصورة الأصلية
+    img = Image.open(file_storage).convert("RGBA")
+    width, height = img.size
+    
+    # إنشاء طبقة شفافة للعلامة المائية
+    watermark_layer = Image.new('RGBA', img.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(watermark_layer)
+    
+    # محاولة تحميل خط مناسب للعلامة المائية
+    font_size = int(width / 15)
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)
+    except:
+        try:
+            # مسار بديل لسيرفرات لينكس (مثل Vercel)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
+            
+    text = "Ahmed Othman Photographer"
+    
+    # رسم العلامة المائية في 3 أماكن مختلفة لضمان تغطية الصورة (لون أبيض نصف شفاف)
+    draw.text((width * 0.1, height * 0.2), text, fill=(255, 255, 255, 120), font=font)
+    draw.text((width * 0.1, height * 0.5), text, fill=(255, 255, 255, 120), font=font)
+    draw.text((width * 0.1, height * 0.8), text, fill=(255, 255, 255, 120), font=font)
+    
+    # دمج الصورة مع العلامة المائية
+    watermarked_img = Image.alpha_composite(img, watermark_layer)
+    watermarked_img = watermarked_img.convert("RGB") # تحويل لـ RGB للحفظ بصيغة JPEG
+    
+    # حفظ الصورة في الذاكرة وتحويلها لنص Base64
+    buffered = io.BytesIO()
+    watermarked_img.save(buffered, format="JPEG", quality=80)
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+# ==========================================
+# 1. واجهة الزوار
 # ==========================================
 @app.route('/')
 def index():
@@ -56,7 +95,7 @@ def category_view(cat_id):
     cat_info = categories_col.find_one({"_id": cat_id})
     if not cat_info:
         return redirect(url_for('index'))
-    return render_template('category.html', cat_id=cat_id, cat_info=cat_info, images=cat_info.get("images", []), banner=get_main_banner())
+    return render_template('category.html', cat_id=cat_id, cat_info=cat_info, banner=get_main_banner())
 
 # ==========================================
 # 2. نظام تسجيل الدخول
@@ -64,9 +103,9 @@ def category_view(cat_id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        if username == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, password):
+        user = request.form.get('username')
+        pw = request.form.get('password')
+        if user == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, pw):
             session['admin_logged_in'] = True
             return jsonify({"status": "success"})
         return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
@@ -78,7 +117,7 @@ def logout():
     return redirect(url_for('index'))
 
 # ==========================================
-# 3. لوحة الإدارة (الحفظ بصيغة Base64 في MongoDB)
+# 3. لوحة الإدارة
 # ==========================================
 @app.route('/admin')
 def admin():
@@ -87,18 +126,17 @@ def admin():
     categories = list(categories_col.find())
     return render_template('admin.html', categories=categories, banner=get_main_banner())
 
-# تحديث البانر الرئيسي (الهيدر)
 @app.route('/admin/update_banner', methods=['POST'])
 def update_banner():
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
     file = request.files.get('banner_image')
     if file and allowed_file(file.filename):
-        encoded_string = base64.b64encode(file.read()).decode('utf-8')
+        # تطبيق العلامة المائية على البانر
+        encoded_string = add_watermark_and_encode(file)
         settings_col.update_one({"_id": "main_banner"}, {"$set": {"base64_data": encoded_string}}, upsert=True)
         flash('تم تحديث صورة الهيدر بنجاح!', 'success')
     return redirect(url_for('admin'))
 
-# إضافة ألبوم جديد
 @app.route('/admin/add_category', methods=['POST'])
 def add_category():
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
@@ -107,12 +145,12 @@ def add_category():
     
     if cat_name and file and allowed_file(file.filename):
         cat_id = f"cat_{int(time.time())}"
-        encoded_cover = base64.b64encode(file.read()).decode('utf-8')
+        # تطبيق العلامة المائية على غلاف الألبوم
+        encoded_cover = add_watermark_and_encode(file)
         categories_col.insert_one({"_id": cat_id, "name": cat_name, "cover_base64": encoded_cover, "images": []})
         flash('تم إنشاء الألبوم بنجاح!', 'success')
     return redirect(url_for('admin'))
 
-# تعديل اسم الألبوم
 @app.route('/admin/edit_category_name/<cat_id>', methods=['POST'])
 def edit_category_name(cat_id):
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
@@ -122,27 +160,25 @@ def edit_category_name(cat_id):
         flash('تم تغيير الاسم بنجاح!', 'success')
     return redirect(url_for('admin'))
 
-# تعديل غلاف الألبوم
 @app.route('/admin/edit_cover/<cat_id>', methods=['POST'])
 def edit_cover(cat_id):
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
     file = request.files.get('new_cover')
     if file and allowed_file(file.filename):
-        encoded_cover = base64.b64encode(file.read()).decode('utf-8')
+        encoded_cover = add_watermark_and_encode(file)
         categories_col.update_one({"_id": cat_id}, {"$set": {"cover_base64": encoded_cover}})
         flash('تم تحديث الغلاف بنجاح!', 'success')
     return redirect(url_for('admin'))
 
-# حذف ألبوم بالكامل
 @app.route('/admin/delete_category/<cat_id>', methods=['POST'])
 def delete_category(cat_id):
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
     categories_col.delete_one({"_id": cat_id})
-    flash('تم حذف الألبوم بالكامل من قاعدة البيانات!', 'success')
+    flash('تم حذف الألبوم بالكامل!', 'success')
     return redirect(url_for('admin'))
 
 # ==========================================
-# 4. إدارة صور الألبوم الداخلي (الحفظ كـ Base64)
+# 4. إدارة صور الألبوم الداخلي
 # ==========================================
 @app.route('/admin/category/<cat_id>')
 def admin_category(cat_id):
@@ -159,18 +195,19 @@ def upload_images(cat_id):
     encoded_images = []
     for file in files:
         if file and allowed_file(file.filename):
-            encoded_img = base64.b64encode(file.read()).decode('utf-8')
+            # تطبيق العلامة المائية على كل صورة مرفوعة في المعرض
+            encoded_img = add_watermark_and_encode(file)
             encoded_images.append(encoded_img)
             
     if encoded_images:
         categories_col.update_one({"_id": cat_id}, {"$push": {"images": {"$each": encoded_images}}})
-        flash('تم رفع الصور وحفظها في الداتا بيز بنجاح!', 'success')
+        flash('تم ختم الصور ورفعها بنجاح!', 'success')
     return redirect(url_for('admin_category', cat_id=cat_id))
 
 @app.route('/admin/delete_image/<cat_id>', methods=['POST'])
 def delete_image(cat_id):
     if not session.get('admin_logged_in'): return jsonify({"status": "error"}), 401
-    img_data = request.json.get('filename') # يمثل نص Base64 للصورة
+    img_data = request.json.get('filename')
     categories_col.update_one({"_id": cat_id}, {"$pull": {"images": img_data}})
     return jsonify({"status": "success"})
 
