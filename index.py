@@ -10,19 +10,25 @@ app = Flask(__name__)
 # مفتاح سري لتشفير الجلسات
 app.secret_key = os.urandom(32).hex()
 
-# إعدادات المجلدات لرفع الصور
+# إعدادات المجلدات لرفع الصور (محلياً)
 UPLOAD_BASE = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
-os.makedirs(UPLOAD_BASE, exist_ok=True)
 
 # ==========================================
-# إعدادات MongoDB Atlas (تم حل مشكلة الرموز المعقدة)
+# حل مشكلة انهيار سيرفر Vercel (Read-Only Filesystem)
 # ==========================================
-# استخدام urllib لتشفير الباسورد الذي يحتوي على رمز @ لتجنب الأخطاء
+try:
+    os.makedirs(UPLOAD_BASE, exist_ok=True)
+except OSError:
+    print("تحذير: السيرفر يعمل على بيئة للقراءة فقط (مثل Vercel).")
+
+# ==========================================
+# إعدادات MongoDB Atlas (تشفير الباسورد)
+# ==========================================
+# تشفير اسم المستخدم وكلمة المرور لتجنب مشاكل الرموز مثل @
 username = urllib.parse.quote_plus('ahmedosman')
 password = urllib.parse.quote_plus('i-fn@bBHV7rXMYj')
 
-# الرابط السليم بعد التشفير
 MONGO_URI = f"mongodb+srv://{username}:{password}@cluster0.8wawfsu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 try:
@@ -98,7 +104,10 @@ def update_banner():
     file = request.files.get('banner_image')
     if file and allowed_file(file.filename):
         filename = f"banner_{int(time.time())}_{secure_filename(file.filename)}"
-        file.save(os.path.join(UPLOAD_BASE, filename))
+        try:
+            file.save(os.path.join(UPLOAD_BASE, filename))
+        except OSError:
+            pass # تجاهل خطأ الحفظ المحلي على Vercel
         
         old_banner = get_main_banner()
         if old_banner and os.path.exists(os.path.join(UPLOAD_BASE, old_banner)):
@@ -119,10 +128,13 @@ def add_category():
     if cat_name and file and allowed_file(file.filename):
         cat_id = f"cat_{int(time.time())}"
         cat_path = os.path.join(UPLOAD_BASE, cat_id)
-        os.makedirs(cat_path, exist_ok=True)
         
-        cover_name = f"cover_{int(time.time())}_{secure_filename(file.filename)}"
-        file.save(os.path.join(cat_path, cover_name))
+        try:
+            os.makedirs(cat_path, exist_ok=True)
+            cover_name = f"cover_{int(time.time())}_{secure_filename(file.filename)}"
+            file.save(os.path.join(cat_path, cover_name))
+        except OSError:
+            cover_name = f"cover_{int(time.time())}_{secure_filename(file.filename)}" # في حالة Vercel
         
         categories_col.insert_one({"_id": cat_id, "name": cat_name, "cover": cover_name, "images": []})
         flash('تم إنشاء الألبوم بنجاح!', 'success')
@@ -147,7 +159,6 @@ def edit_cover(cat_id):
     
     if cat_info and file and allowed_file(file.filename):
         cat_path = os.path.join(UPLOAD_BASE, cat_id)
-        os.makedirs(cat_path, exist_ok=True)
         
         old_cover = cat_info.get("cover", "")
         if old_cover and os.path.exists(os.path.join(cat_path, old_cover)):
@@ -155,7 +166,12 @@ def edit_cover(cat_id):
             except: pass
             
         cover_name = f"cover_{int(time.time())}_{secure_filename(file.filename)}"
-        file.save(os.path.join(cat_path, cover_name))
+        
+        try:
+            os.makedirs(cat_path, exist_ok=True)
+            file.save(os.path.join(cat_path, cover_name))
+        except OSError:
+            pass # Vercel
         
         categories_col.update_one({"_id": cat_id}, {"$set": {"cover": cover_name}})
         flash('تم تحديث الغلاف بنجاح!', 'success')
@@ -184,13 +200,16 @@ def upload_images(cat_id):
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
     files = request.files.getlist('files')
     cat_path = os.path.join(UPLOAD_BASE, cat_id)
-    os.makedirs(cat_path, exist_ok=True)
     
     uploaded_names = []
     for file in files:
         if file and allowed_file(file.filename):
             filename = f"img_{int(time.time()*1000)}_{secure_filename(file.filename)}"
-            file.save(os.path.join(cat_path, filename))
+            try:
+                os.makedirs(cat_path, exist_ok=True)
+                file.save(os.path.join(cat_path, filename))
+            except OSError:
+                pass # Vercel
             uploaded_names.append(filename)
             
     if uploaded_names:
