@@ -23,7 +23,7 @@
             <form method="POST" action="{{ url_for('upload_images', cat_id=cat_id) }}" enctype="multipart/form-data">
                 <div class="file-drop">
                     <i class="fas fa-images"></i>
-                    <p style="color:#fff; margin-top:10px;">حدد الصور لرفعها (يمكن اختيار أكثر من صورة معاً)</p>
+                    <p style="color:#fff; margin-top:10px;">حدد الصور لرفعها (تخزين سحابي مباشر)</p>
                     <input type="file" name="files" accept="image/*" multiple required>
                 </div>
                 <button type="submit" class="btn-gold" onclick="swalLoad()"><i class="fas fa-cloud-upload-alt"></i> رفع اللقطات</button>
@@ -32,15 +32,14 @@
 
         <div class="admin-card lux-card">
             <h3 class="card-heading"><i class="fas fa-sort"></i> ترتيب وإدارة الصور</h3>
-            <p style="color:var(--text-sub); font-size:12px; margin-bottom:20px;">* اضغط واسحب الصورة لتغيير ترتيبها في المعرض.</p>
+            <p style="color:var(--text-sub); font-size:12px; margin-bottom:20px;">* اضغط واسحب الصورة لتغيير ترتيبها.</p>
             
             <div id="sortable-list" class="sortable-grid">
                 {% for img in cat_info.get('images', []) %}
                     <div class="sort-item" data-id="{{ img }}">
-                        <img src="{{ url_for('static', filename='uploads/' + cat_id + '/' + img) }}" alt="Gallery Image">
+                        <img src="data:image/jpeg;base64,{{ img }}" alt="Gallery Image">
                         <div class="sort-overlay">
-                            <!-- زر الحذف الدائري المتسنتر بالملي -->
-                            <button class="btn-del-circle" onclick="delImg('{{ img }}')" title="حذف الصورة">
+                            <button class="btn-del-circle" data-img="{{ img }}" onclick="delImg(this)" title="حذف الصورة">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -55,7 +54,7 @@
     </div>
 
     <script>
-        function swalLoad() { Swal.fire({ title: 'جاري الرفع...', background: '#0d111a', color: '#fff', didOpen: () => { Swal.showLoading(); }}); }
+        function swalLoad() { Swal.fire({ title: 'جاري الرفع والسحب...', background: '#0d111a', color: '#fff', didOpen: () => { Swal.showLoading(); }}); }
 
         var el = document.getElementById('sortable-list');
         if (el && el.children.length > 0) {
@@ -71,12 +70,13 @@
             });
         }
 
-        function delImg(filename) {
+        function delImg(btnElement) {
+            let imgData = btnElement.getAttribute('data-img');
             Swal.fire({ title: 'تأكيد!', text: 'حذف الصورة نهائياً؟', icon: 'warning', showCancelButton: true, confirmButtonColor: '#EF4444', confirmButtonText: 'نعم احذف', cancelButtonText: 'إلغاء', background: '#0d111a', color: '#fff' })
             .then((r) => { 
                 if(r.isConfirmed) { 
                     fetch("{{ url_for('delete_image', cat_id=cat_id) }}", {
-                        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({filename: filename})
+                        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({filename: imgData})
                     }).then(res => res.json()).then(data => { if(data.status === 'success') location.reload(); });
                 } 
             });
