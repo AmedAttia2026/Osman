@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>أحمد عثمان | Photographer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="top-banner" style="background-image: url('{{ url_for('static', filename='uploads/' + banner) if banner else '' }}');">
+        <div class="banner-text-container">
+            <span class="banner-subtitle">Photographer</span>
+            <div class="banner-title">Ahmed Othman</div>
+        </div>
+    </header>
+
+    <main class="cat-grid">
+        {% for cat in categories %}
+            <a href="{{ url_for('category_view', cat_id=cat['_id']) }}" class="cat-card">
+                <img src="{{ url_for('static', filename='uploads/' + cat['_id'] + '/' + cat['cover']) }}" alt="{{ cat['name'] }}">
+                <div class="cat-content">
+                    <h2>{{ cat['name'] }}</h2>
+                    <span>شاهد الألبوم</span>
+                </div>
+            </a>
+        {% endfor %}
+        
+        {% if not categories %}
+            <div style="grid-column: 1/-1; text-align:center; padding: 50px; color: var(--text-sub);">
+                <h2>المعرض قيد التجهيز...</h2>
+            </div>
+        {% endif %}
+    </main>
+
+</body>
+</html>

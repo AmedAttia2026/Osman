@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>إدارة المعرض | أحمد عثمان</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <nav class="nav-bar admin-nav">
+        <h1 class="nav-title"><i class="fas fa-crown" style="color:var(--gold);"></i> لوحة تحكم الاستوديو</h1>
+        <div style="display:flex; gap:10px;">
+            <a href="{{ url_for('index') }}" target="_blank" class="btn-outline-gold"><i class="fas fa-globe"></i> الموقع</a>
+            <a href="{{ url_for('logout') }}" class="btn-outline-red"><i class="fas fa-sign-out-alt"></i> خروج</a>
+        </div>
+    </nav>
+
+    <div class="admin-container">
+        
+        <div class="admin-card lux-card">
+            <h2 class="card-heading"><i class="fas fa-image"></i> صورة البانر الرئيسية (الهيدر)</h2>
+            {% if banner %}
+                <div class="banner-preview">
+                    <img src="{{ url_for('static', filename='uploads/' + banner) }}" alt="Banner">
+                </div>
+            {% endif %}
+            <form method="POST" action="{{ url_for('update_banner') }}" enctype="multipart/form-data" class="upload-inline-form">
+                <div class="input-file-wrapper">
+                    <i class="fas fa-file-image"></i>
+                    <input type="file" name="banner_image" class="admin-input-file" accept="image/*" required>
+                </div>
+                <button type="submit" class="btn-gold" onclick="swalLoad()"><i class="fas fa-sync"></i> تحديث الغلاف</button>
+            </form>
+        </div>
+
+        <div class="admin-card lux-card">
+            <h2 class="card-heading"><i class="fas fa-folder-plus"></i> إضافة قسم جديد</h2>
+            <form method="POST" action="{{ url_for('add_category') }}" enctype="multipart/form-data">
+                <input type="text" name="cat_name" class="admin-input" placeholder="اسم الألبوم (مثال: سيشن خطوبة)" required>
+                <div class="file-drop">
+                    <i class="fas fa-images"></i>
+                    <p style="color:#fff; margin-top:10px;">اضغط لاختيار صورة غلاف الألبوم</p>
+                    <input type="file" name="cover_image" accept="image/*" required>
+                </div>
+                <button type="submit" class="btn-gold" onclick="swalLoad()"><i class="fas fa-plus"></i> إضافة الألبوم</button>
+            </form>
+        </div>
+
+        <h2 class="section-title"><i class="fas fa-tasks"></i> الألبومات الحالية (إدارة)</h2>
+        <div class="albums-grid">
+            {% for cat in categories %}
+                <div class="admin-card lux-card album-card">
+                    <div class="album-cover-container">
+                        <img src="{{ url_for('static', filename='uploads/' + cat['_id'] + '/' + cat['cover']) }}" alt="Cover">
+                        <div class="album-cover-overlay"></div>
+                        <div class="album-badge">
+                            <i class="fas fa-images"></i> {{ cat['images']|length if cat.get('images') else 0 }} صور
+                        </div>
+                    </div>
+                    
+                    <div class="album-details">
+                        <div class="album-title-row">
+                            <h3 class="album-title">{{ cat['name'] }}</h3>
+                            <button class="edit-name-btn" onclick="editCategoryName('{{ cat['_id'] }}', '{{ cat['name'] }}')" title="تعديل اسم القسم"><i class="fas fa-pen"></i></button>
+                        </div>
+                        
+                        <div class="album-actions">
+                            <form action="{{ url_for('edit_cover', cat_id=cat['_id']) }}" method="POST" enctype="multipart/form-data" id="form-cover-{{ cat['_id'] }}" style="flex:1;">
+                                <button type="button" class="btn-edit" title="تعديل الغلاف">
+                                    <i class="fas fa-camera"></i> تغيير الغلاف
+                                    <input type="file" name="new_cover" accept="image/*" onchange="document.getElementById('form-cover-{{ cat['_id'] }}').submit(); swalLoad();">
+                                </button>
+                            </form>
+                            
+                            <a href="{{ url_for('admin_category', cat_id=cat['_id']) }}" class="btn-gold action-btn-text"><i class="fas fa-cog"></i> إدارة الصور</a>
+                            
+                            <form id="del-{{ cat['_id'] }}" action="{{ url_for('delete_category', cat_id=cat['_id']) }}" method="POST" style="display:none;"></form>
+                            <button class="btn-red icon-btn" onclick="confirmDel('del-{{ cat['_id'] }}', 'هل متأكد من مسح هذا القسم بالكامل أم لا؟')" title="حذف القسم"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            {% if not categories %}
+                <p style="text-align:center; color:var(--text-sub); width:100%; padding:20px;">لا يوجد ألبومات حالياً.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <script>
+          {% for category, message in messages %}
+            Swal.fire({ icon: '{{ "error" if category == "error" else "success" }}', title: '{{ message }}', background: '#0d111a', color: '#fff', confirmButtonColor: '#FFB300' });
+          {% endfor %}
+        </script>
+      {% endif %}
+    {% endwith %}
+
+    <script>
+        function swalLoad() { Swal.fire({ title: 'جاري التنفيذ...', background: '#0d111a', color: '#fff', didOpen: () => { Swal.showLoading(); }}); }
+        
+        function editCategoryName(cat_id, oldName) {
+            Swal.fire({
+                title: 'تعديل اسم القسم', input: 'text', inputValue: oldName, showCancelButton: true, confirmButtonText: 'حفظ التعديل', cancelButtonText: 'إلغاء', background: '#0d111a', color: '#fff', confirmButtonColor: '#FFB300',
+                inputValidator: (value) => { if (!value) return 'يجب كتابة اسم القسم!' }
+            }).then((result) => {
+                if (result.isConfirmed && result.value !== oldName) {
+                    swalLoad();
+                    let form = document.createElement('form');
+                    form.method = 'POST'; form.action = '/admin/edit_category_name/' + cat_id;
+                    let input = document.createElement('input'); input.type = 'hidden'; input.name = 'new_name'; input.value = result.value;
+                    form.appendChild(input); document.body.appendChild(form); form.submit();
+                }
+            });
+        }
+
+        function confirmDel(id, txt) {
+            Swal.fire({ title: 'تأكيد الحذف!', text: txt, icon: 'warning', showCancelButton: true, confirmButtonColor: '#EF4444', confirmButtonText: 'نعم، مسح القسم', cancelButtonText: 'إلغاء', background: '#0d111a', color: '#fff' })
+            .then((r) => { if(r.isConfirmed) { swalLoad(); document.getElementById(id).submit(); } });
+        }
+    </script>
+</body>
+</html>

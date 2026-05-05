@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>إدارة {{ cat_info['name'] }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+
+    <nav class="nav-bar">
+        <h1 class="nav-title">ألبوم: {{ cat_info['name'] }}</h1>
+        <a href="{{ url_for('admin') }}" class="btn-back-nav"><i class="fas fa-arrow-right"></i> رجوع</a>
+    </nav>
+
+    <div class="admin-container">
+        <div class="admin-card lux-card">
+            <h3 class="card-heading"><i class="fas fa-upload"></i> إضافة صور للألبوم</h3>
+            <form method="POST" action="{{ url_for('upload_images', cat_id=cat_id) }}" enctype="multipart/form-data">
+                <div class="file-drop">
+                    <i class="fas fa-images"></i>
+                    <p style="color:#fff; margin-top:10px;">حدد الصور لرفعها (يمكن اختيار أكثر من صورة معاً)</p>
+                    <input type="file" name="files" accept="image/*" multiple required>
+                </div>
+                <button type="submit" class="btn-gold" onclick="swalLoad()"><i class="fas fa-cloud-upload-alt"></i> رفع اللقطات</button>
+            </form>
+        </div>
+
+        <div class="admin-card lux-card">
+            <h3 class="card-heading"><i class="fas fa-sort"></i> ترتيب وإدارة الصور</h3>
+            <p style="color:var(--text-sub); font-size:12px; margin-bottom:20px;">* اضغط واسحب الصورة لتغيير ترتيبها في المعرض.</p>
+            
+            <div id="sortable-list" class="sortable-grid">
+                {% for img in cat_info.get('images', []) %}
+                    <div class="sort-item" data-id="{{ img }}">
+                        <img src="{{ url_for('static', filename='uploads/' + cat_id + '/' + img) }}" alt="Gallery Image">
+                        <div class="sort-overlay">
+                            <!-- زر الحذف الدائري المتسنتر بالملي -->
+                            <button class="btn-del-circle" onclick="delImg('{{ img }}')" title="حذف الصورة">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+                
+                {% if not cat_info.get('images', []) %}
+                    <p style="text-align:center; color:var(--text-sub); width:100%; grid-column: 1/-1;">لا توجد صور في هذا الألبوم بعد.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function swalLoad() { Swal.fire({ title: 'جاري الرفع...', background: '#0d111a', color: '#fff', didOpen: () => { Swal.showLoading(); }}); }
+
+        var el = document.getElementById('sortable-list');
+        if (el && el.children.length > 0) {
+            var sortable = Sortable.create(el, {
+                animation: 150,
+                onEnd: function () {
+                    let newOrder = [];
+                    document.querySelectorAll('.sort-item').forEach(item => { newOrder.push(item.getAttribute('data-id')); });
+                    fetch("{{ url_for('reorder_images', cat_id=cat_id) }}", {
+                        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({order: newOrder})
+                    });
+                }
+            });
+        }
+
+        function delImg(filename) {
+            Swal.fire({ title: 'تأكيد!', text: 'حذف الصورة نهائياً؟', icon: 'warning', showCancelButton: true, confirmButtonColor: '#EF4444', confirmButtonText: 'نعم احذف', cancelButtonText: 'إلغاء', background: '#0d111a', color: '#fff' })
+            .then((r) => { 
+                if(r.isConfirmed) { 
+                    fetch("{{ url_for('delete_image', cat_id=cat_id) }}", {
+                        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({filename: filename})
+                    }).then(res => res.json()).then(data => { if(data.status === 'success') location.reload(); });
+                } 
+            });
+        }
+    </script>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <script>
+          {% for category, message in messages %}
+            Swal.fire({ icon: '{{ "error" if category == "error" else "success" }}', title: '{{ message }}', background: '#0d111a', color: '#fff', confirmButtonColor: '#FFB300' });
+          {% endfor %}
+        </script>
+      {% endif %}
+    {% endwith %}
+
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="login-body">
+
+    <div class="login-wrapper">
+        <div class="premium-card">
+            
+            <div class="login-header">
+                <div class="icon-glow-wrapper">
+                    <i class="fas fa-camera-retro login-icon"></i>
+                </div>
+                <h2 class="login-title">Studio Access</h2>
+                <p class="login-sub">Ahmed Othman Portal</p>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="input-box">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" id="username" class="lux-input" placeholder="Username" autocomplete="off" required>
+                </div>
+                
+                <div class="input-box">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" id="password" class="lux-input" placeholder="Password" required>
+                    <i class="fas fa-eye toggle-pwd" id="toggle-icon" onclick="togglePass()"></i>
+                </div>
+                
+                <button type="submit" class="btn-mega" id="loginBtn">
+                    Enter Studio <i class="fas fa-sign-in-alt"></i>
+                </button>
+            </form>
+            
+            <a href="{{ url_for('index') }}" class="back-link">
+                <i class="fas fa-arrow-left"></i> Return to Gallery
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function togglePass() {
+            const pass = document.getElementById('password');
+            const icon = document.getElementById('toggle-icon');
+            if (pass.type === 'password') {
+                pass.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); icon.style.color = 'var(--gold)';
+            } else {
+                pass.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); icon.style.color = '#9ca3af';
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('username', user);
+            formData.append('password', pass);
+
+            try {
+                const response = await fetch("{{ url_for('login') }}", { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'success') {
+                    Swal.fire({ icon: 'success', title: 'Welcome Admin!', background: '#0d111a', color: '#fff', showConfirmButton: false, timer: 1500 })
+                    .then(() => { window.location.href = "{{ url_for('admin') }}"; });
+                } else {
+                    btn.innerHTML = 'Enter Studio <i class="fas fa-sign-in-alt"></i>'; btn.disabled = false;
+                    Swal.fire({ icon: 'error', title: 'Access Denied', text: data.message, background: '#0d111a', color: '#fff', confirmButtonColor: '#FFB300' });
+                }
+            } catch (error) {
+                btn.innerHTML = 'Enter Studio <i class="fas fa-sign-in-alt"></i>'; btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

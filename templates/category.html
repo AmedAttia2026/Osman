@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ cat_info['name'] }} | أحمد عثمان</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <header class="top-banner" style="height: 25vh; min-height: 180px; background-image: url('{{ url_for('static', filename='uploads/' + banner) if banner else '' }}');">
+        <div class="banner-text-container">
+            <span class="banner-subtitle">Photographer</span>
+            <div class="banner-title" style="font-size: clamp(1.8rem, 6vw, 3.5rem);">Ahmed Othman</div>
+        </div>
+    </header>
+
+    <nav class="nav-bar">
+        <h1 class="nav-title">{{ cat_info['name'] }}</h1>
+        <a href="{{ url_for('index') }}" class="btn-back-nav"><i class="fas fa-arrow-right"></i> رجوع</a>
+    </nav>
+
+    <main class="masonry-grid">
+        {% if images %}
+            {% for image in images %}
+                <div class="masonry-item" onclick="openLb('{{ url_for('static', filename='uploads/' + cat_id + '/' + image) }}')">
+                    <img src="{{ url_for('static', filename='uploads/' + cat_id + '/' + image) }}" loading="lazy">
+                    <div class="zoom-overlay"><i class="fas fa-search-plus"></i></div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p style="text-align:center; color:var(--text-sub); margin-top:50px;">لا توجد صور حالياً في هذا الألبوم.</p>
+        {% endif %}
+    </main>
+
+    <div id="lightbox" class="lightbox" onclick="this.style.display='none'">
+        <span class="close-lb">&times;</span>
+        <img id="lb-img" onclick="event.stopPropagation()">
+    </div>
+
+    <script>
+        function openLb(src) { document.getElementById('lightbox').style.display = 'flex'; document.getElementById('lb-img').src = src; }
+    </script>
+</body>
+</html>
