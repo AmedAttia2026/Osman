@@ -84,7 +84,7 @@ body { background: var(--bg-main); color: var(--text-main); display: flex; flex-
 @media (max-width: 900px) { .masonry-grid { column-count: 2; } }
 @media (max-width: 500px) { .masonry-grid { column-count: 1; } }
 
-.masonry-item { break-inside: avoid; margin-bottom: 15px; border-radius: 12px; overflow: hidden; cursor: pointer; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.5);}
+.masonry-item { break-inside: avoid; margin-bottom: 15px; border-radius: 12px; overflow: hidden; cursor: pointer; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.5); background-color: rgba(255, 255, 255, 0.03); min-height: 150px;}
 .masonry-item img { width: 100%; display: block; transition: 0.4s;}
 .zoom-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; opacity: 0; transition: 0.3s; color: var(--gold); font-size: 2rem;}
 .masonry-item:hover .zoom-overlay { opacity: 1; }
@@ -164,39 +164,33 @@ body { background: var(--bg-main); color: var(--text-main); display: flex; flex-
    حماية الصور وحقوق الملكية (إضافات الأمان)
    ========================================================= */
 body {
-    -webkit-user-select: none; /* منع تحديد النص */
+    -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
 }
 
 img {
-    -webkit-user-drag: none; /* منع سحب الصورة */
+    -webkit-user-drag: none;
     -khtml-user-drag: none;
     -moz-user-drag: none;
     -o-user-drag: none;
-    pointer-events: none; /* منع أي تفاعل مع الصورة كليك يمين أو غيره */
-    -webkit-touch-callout: none; /* منع القائمة المنبثقة عند الضغط المطول في الهواتف */
+    pointer-events: none;
+    -webkit-touch-callout: none;
 }
 
-/* استثناء صور لوحة الإدارة من الحماية للتحكم المريح */
 .admin-container img, .login-wrapper img {
     pointer-events: auto;
 }
 
-/* كلاس التشويش الذي يعمل عند محاولة تصوير الشاشة */
 .blur-protect {
     filter: blur(15px) !important;
     transition: 0.1s;
 }
 
-/* =========================================================
-   طبقة العلامة المائية المانعة للسكرين شوت (منتصف الصورة فقط)
-   ========================================================= */
 .watermark-protection {
     position: absolute;
     inset: 0;
-    /* علامة مائية واحدة شفافة جداً ومائلة في المنتصف باسم Ahmed Osman */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 800'%3E%3Ctext x='400' y='400' fill='rgba(255, 255, 255, 0.08)' font-weight='bold' font-size='60' font-family='Arial' text-anchor='middle' dominant-baseline='middle' transform='rotate(-30 400 400)'%3EAhmed Osman%3C/text%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center center;
@@ -206,15 +200,13 @@ img {
 }
 
 /* =========================================================
-   تأثير التحميل الذكي (Lazy Load) للصور
+   تأثير التحميل الذكي (Lazy Load) للصور 
    ========================================================= */
 .lazy-image {
     opacity: 0;
-    transform: scale(0.95);
-    transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+    transition: opacity 0.5s ease-in-out;
 }
 
 .lazy-image.loaded {
     opacity: 1;
-    transform: scale(1);
 }
