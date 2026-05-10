@@ -35,6 +35,7 @@ ADMIN_USERNAME = "Admin"
 ADMIN_PASSWORD_HASH = generate_password_hash("Ahmed123")
 
 def is_image(file_storage):
+    """التحقق من أن الملف صورة فعلاً بغض النظر عن الامتداد"""
     try:
         file_storage.seek(0)
         img = Image.open(file_storage)
@@ -50,7 +51,7 @@ def get_main_banner():
     return doc.get("base64_data", "") if doc else ""
 
 # ==========================================
-# دالة دمج العلامة المائية (شكل أنيق ومائل على الحواف)
+# دالة دمج العلامة المائية - Ahmed Osman
 # ==========================================
 def add_watermark_and_encode(file_storage):
     file_storage.seek(0)
@@ -63,24 +64,20 @@ def add_watermark_and_encode(file_storage):
     watermark_layer = Image.new('RGBA', img.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(watermark_layer)
     
-    # حجم خط أنيق وبسيط (أصغر من السابق)
-    font_size = max(int(width / 35), 16)
+    font_size = max(int(width / 45), 14)
     
-    # محاولة تحميل خط مائل (Italic) ليعطي طابع فني وجميل
+    # محاولة تحميل خط مائل
     try:
-        font = ImageFont.truetype("ariali.ttf", font_size) # ويندوز مائل
+        font = ImageFont.truetype("ariali.ttf", font_size)
     except:
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf", font_size) # لينكس مائل
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf", font_size)
         except:
-            try:
-                font = ImageFont.truetype("arial.ttf", font_size) # عادي كاحتياطي
-            except:
-                font = ImageFont.load_default()
+            font = ImageFont.load_default()
                 
-    text = "Ahmed Osman Photographer"
+    text = "Ahmed Osman"
     
-    # حساب أبعاد النص لضبط مكانه
+    # حساب أبعاد النص
     try:
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]
@@ -88,20 +85,21 @@ def add_watermark_and_encode(file_storage):
     except:
         text_width, text_height = draw.textsize(text, font=font)
         
-    # وضع العلامة المائية في الحافة السفلية اليمنى مع ترك هامش بسيط جداً
-    margin_x = width * 0.02
-    margin_y = height * 0.02
+    # --- إعدادات الهوامش (Margins) ---
+    margin_x = width * 0.03 # هامش 3% من العرض
+    margin_y = height * 0.03 # هامش 3% من الارتفاع
+    
+    # الختم الوحيد: في الزاوية السفلية اليمنى (Bottom-Right)
     x = width - text_width - margin_x
     y = height - text_height - margin_y
-    
-    # رسم النص بلون أبيض شفاف (أنيق وغير مزعج للعين)
-    draw.text((x, y), text, fill=(255, 255, 255, 170), font=font)
+    draw.text((x, y), text, fill=(255, 255, 255, 140), font=font)
     
     watermarked_img = Image.alpha_composite(img, watermark_layer)
     watermarked_img = watermarked_img.convert("RGB") 
     
     buffered = io.BytesIO()
-    watermarked_img.save(buffered, format="JPEG", quality=70, optimize=True)
+    # حفظ بجودة معقولة مع ضغط لسرعة التحميل
+    watermarked_img.save(buffered, format="JPEG", quality=75, optimize=True)
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 # ==========================================
