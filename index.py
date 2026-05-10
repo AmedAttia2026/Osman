@@ -50,39 +50,57 @@ def get_main_banner():
     return doc.get("base64_data", "") if doc else ""
 
 # ==========================================
-# دالة دمج العلامة المائية (تم تسريعها وضغطها بامتياز)
+# دالة دمج العلامة المائية (شكل أنيق ومائل على الحواف)
 # ==========================================
 def add_watermark_and_encode(file_storage):
     file_storage.seek(0)
     img = Image.open(file_storage).convert("RGBA")
     
-    # 🔥 [سرعة صاروخية]: تصغير حجم الصورة ليناسب العرض على الشاشات وتقليل الحجم بنسبة 90%
+    # تصغير حجم الصورة ليناسب العرض على الشاشات وتسريع الرفع
     img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
     width, height = img.size
     
     watermark_layer = Image.new('RGBA', img.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(watermark_layer)
     
-    font_size = max(int(width / 15), 15)
+    # حجم خط أنيق وبسيط (أصغر من السابق)
+    font_size = max(int(width / 35), 16)
+    
+    # محاولة تحميل خط مائل (Italic) ليعطي طابع فني وجميل
     try:
-        font = ImageFont.truetype("arial.ttf", font_size)
+        font = ImageFont.truetype("ariali.ttf", font_size) # ويندوز مائل
     except:
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf", font_size) # لينكس مائل
         except:
-            font = ImageFont.load_default()
-            
-    text = "Ahmed Othman Photographer"
+            try:
+                font = ImageFont.truetype("arial.ttf", font_size) # عادي كاحتياطي
+            except:
+                font = ImageFont.load_default()
+                
+    text = "Ahmed Osman Photographer"
     
-    draw.text((width * 0.1, height * 0.2), text, fill=(255, 255, 255, 120), font=font)
-    draw.text((width * 0.1, height * 0.5), text, fill=(255, 255, 255, 120), font=font)
-    draw.text((width * 0.1, height * 0.8), text, fill=(255, 255, 255, 120), font=font)
+    # حساب أبعاد النص لضبط مكانه
+    try:
+        text_bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
+    except:
+        text_width, text_height = draw.textsize(text, font=font)
+        
+    # وضع العلامة المائية في الحافة السفلية اليمنى مع ترك هامش بسيط جداً
+    margin_x = width * 0.02
+    margin_y = height * 0.02
+    x = width - text_width - margin_x
+    y = height - text_height - margin_y
+    
+    # رسم النص بلون أبيض شفاف (أنيق وغير مزعج للعين)
+    draw.text((x, y), text, fill=(255, 255, 255, 170), font=font)
     
     watermarked_img = Image.alpha_composite(img, watermark_layer)
     watermarked_img = watermarked_img.convert("RGB") 
     
     buffered = io.BytesIO()
-    # 🔥 [سرعة صاروخية]: حفظ الصورة بجودة 70% وتفعيل الـ optimize لتقليص الحجم للحد الأدنى
     watermarked_img.save(buffered, format="JPEG", quality=70, optimize=True)
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
@@ -91,7 +109,6 @@ def add_watermark_and_encode(file_storage):
 # ==========================================
 @app.route('/')
 def index():
-    # 🔥 [سرعة صاروخية]: جلب بيانات الغلاف فقط وتجاهل مصفوفة الصور الضخمة لتسريع تحميل الموقع
     categories = list(categories_col.find({}, {"images": 0}))
     return render_template('index.html', categories=categories, banner=get_main_banner())
 
