@@ -74,7 +74,8 @@
                 const data = await response.json();
                 
                 if (response.ok && data.status === 'success') {
-                    Swal.fire({ icon: 'success', title: 'Welcome Admin!', background: '#0d111a', color: '#fff', showConfirmButton: false, timer: 1500 })
+                    // تم تقليل وقت الانتظار هنا لسرعة الدخول الفوري
+                    Swal.fire({ icon: 'success', title: 'Welcome Admin!', background: '#0d111a', color: '#fff', showConfirmButton: false, timer: 400 })
                     .then(() => { window.location.href = "{{ url_for('admin') }}"; });
                 } else {
                     btn.innerHTML = 'Enter Studio <i class="fas fa-sign-in-alt"></i>'; btn.disabled = false;
