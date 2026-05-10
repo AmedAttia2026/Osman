@@ -34,52 +34,56 @@ except Exception as e:
 ADMIN_USERNAME = "Admin"
 ADMIN_PASSWORD_HASH = generate_password_hash("Ahmed123")
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+def is_image(file_storage):
+    try:
+        file_storage.seek(0)
+        img = Image.open(file_storage)
+        img.verify()
+        file_storage.seek(0)
+        return True
+    except:
+        file_storage.seek(0)
+        return False
 
 def get_main_banner():
     doc = settings_col.find_one({"_id": "main_banner"})
     return doc.get("base64_data", "") if doc else ""
 
 # ==========================================
-# دالة دمج العلامة المائية وتحويلها لـ Base64
+# دالة دمج العلامة المائية (تم تسريعها وضغطها بامتياز)
 # ==========================================
 def add_watermark_and_encode(file_storage):
-    # فتح الصورة الأصلية
+    file_storage.seek(0)
     img = Image.open(file_storage).convert("RGBA")
+    
+    # 🔥 [سرعة صاروخية]: تصغير حجم الصورة ليناسب العرض على الشاشات وتقليل الحجم بنسبة 90%
+    img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
     width, height = img.size
     
-    # إنشاء طبقة شفافة للعلامة المائية
     watermark_layer = Image.new('RGBA', img.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(watermark_layer)
     
-    # محاولة تحميل خط مناسب للعلامة المائية
-    font_size = int(width / 15)
+    font_size = max(int(width / 15), 15)
     try:
         font = ImageFont.truetype("arial.ttf", font_size)
     except:
         try:
-            # مسار بديل لسيرفرات لينكس (مثل Vercel)
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
         except:
             font = ImageFont.load_default()
             
     text = "Ahmed Othman Photographer"
     
-    # رسم العلامة المائية في 3 أماكن مختلفة لضمان تغطية الصورة (لون أبيض نصف شفاف)
     draw.text((width * 0.1, height * 0.2), text, fill=(255, 255, 255, 120), font=font)
     draw.text((width * 0.1, height * 0.5), text, fill=(255, 255, 255, 120), font=font)
     draw.text((width * 0.1, height * 0.8), text, fill=(255, 255, 255, 120), font=font)
     
-    # دمج الصورة مع العلامة المائية
     watermarked_img = Image.alpha_composite(img, watermark_layer)
-    watermarked_img = watermarked_img.convert("RGB") # تحويل لـ RGB للحفظ بصيغة JPEG
+    watermarked_img = watermarked_img.convert("RGB") 
     
-    # حفظ الصورة في الذاكرة وتحويلها لنص Base64
     buffered = io.BytesIO()
-    watermarked_img.save(buffered, format="JPEG", quality=80)
+    # 🔥 [سرعة صاروخية]: حفظ الصورة بجودة 70% وتفعيل الـ optimize لتقليص الحجم للحد الأدنى
+    watermarked_img.save(buffered, format="JPEG", quality=70, optimize=True)
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
 # ==========================================
@@ -87,7 +91,8 @@ def add_watermark_and_encode(file_storage):
 # ==========================================
 @app.route('/')
 def index():
-    categories = list(categories_col.find())
+    # 🔥 [سرعة صاروخية]: جلب بيانات الغلاف فقط وتجاهل مصفوفة الصور الضخمة لتسريع تحميل الموقع
+    categories = list(categories_col.find({}, {"images": 0}))
     return render_template('index.html', categories=categories, banner=get_main_banner())
 
 @app.route('/category/<cat_id>')
@@ -130,11 +135,12 @@ def admin():
 def update_banner():
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
     file = request.files.get('banner_image')
-    if file and allowed_file(file.filename):
-        # تطبيق العلامة المائية على البانر
+    if file and is_image(file):
         encoded_string = add_watermark_and_encode(file)
         settings_col.update_one({"_id": "main_banner"}, {"$set": {"base64_data": encoded_string}}, upsert=True)
         flash('تم تحديث صورة الهيدر بنجاح!', 'success')
+    else:
+        flash('فشل التحديث، يرجى التأكد من رفع ملف صورة صحيح.', 'error')
     return redirect(url_for('admin'))
 
 @app.route('/admin/add_category', methods=['POST'])
@@ -143,12 +149,13 @@ def add_category():
     cat_name = request.form.get('cat_name')
     file = request.files.get('cover_image')
     
-    if cat_name and file and allowed_file(file.filename):
+    if cat_name and file and is_image(file):
         cat_id = f"cat_{int(time.time())}"
-        # تطبيق العلامة المائية على غلاف الألبوم
         encoded_cover = add_watermark_and_encode(file)
         categories_col.insert_one({"_id": cat_id, "name": cat_name, "cover_base64": encoded_cover, "images": []})
         flash('تم إنشاء الألبوم بنجاح!', 'success')
+    else:
+        flash('فشل الإنشاء، يرجى التأكد من رفع صورة للغلاف.', 'error')
     return redirect(url_for('admin'))
 
 @app.route('/admin/edit_category_name/<cat_id>', methods=['POST'])
@@ -164,10 +171,12 @@ def edit_category_name(cat_id):
 def edit_cover(cat_id):
     if not session.get('admin_logged_in'): return redirect(url_for('login'))
     file = request.files.get('new_cover')
-    if file and allowed_file(file.filename):
+    if file and is_image(file):
         encoded_cover = add_watermark_and_encode(file)
         categories_col.update_one({"_id": cat_id}, {"$set": {"cover_base64": encoded_cover}})
         flash('تم تحديث الغلاف بنجاح!', 'success')
+    else:
+        flash('فشل التحديث، يرجى رفع ملف صورة.', 'error')
     return redirect(url_for('admin'))
 
 @app.route('/admin/delete_category/<cat_id>', methods=['POST'])
@@ -178,7 +187,7 @@ def delete_category(cat_id):
     return redirect(url_for('admin'))
 
 # ==========================================
-# 4. إدارة صور الألبوم الداخلي
+# 4. إدارة صور الألبوم الداخلي (AJAX Upload)
 # ==========================================
 @app.route('/admin/category/<cat_id>')
 def admin_category(cat_id):
@@ -189,20 +198,35 @@ def admin_category(cat_id):
 
 @app.route('/admin/upload_images/<cat_id>', methods=['POST'])
 def upload_images(cat_id):
-    if not session.get('admin_logged_in'): return redirect(url_for('login'))
-    files = request.files.getlist('files')
+    if not session.get('admin_logged_in'): 
+        return jsonify({"status": "error", "message": "غير مصرح لك"}), 401
     
+    files = request.files.getlist('files')
+    if not files or files[0].filename == '':
+        return jsonify({"status": "error", "message": "لم يتم اختيار صور!"}), 400
+
     encoded_images = []
+    success_count = 0
+    fail_count = 0
+
     for file in files:
-        if file and allowed_file(file.filename):
-            # تطبيق العلامة المائية على كل صورة مرفوعة في المعرض
-            encoded_img = add_watermark_and_encode(file)
-            encoded_images.append(encoded_img)
+        if file and is_image(file):
+            try:
+                encoded_img = add_watermark_and_encode(file)
+                encoded_images.append(encoded_img)
+                success_count += 1
+            except Exception as e:
+                fail_count += 1
+        else:
+            fail_count += 1
             
     if encoded_images:
         categories_col.update_one({"_id": cat_id}, {"$push": {"images": {"$each": encoded_images}}})
-        flash('تم ختم الصور ورفعها بنجاح!', 'success')
-    return redirect(url_for('admin_category', cat_id=cat_id))
+        msg = f"تم رفع {success_count} صورة بنجاح!"
+        if fail_count > 0: msg += f" وفشل رفع {fail_count} ملفات غير صالحة."
+        return jsonify({"status": "success", "message": msg})
+    else:
+        return jsonify({"status": "error", "message": "فشل الرفع بالكامل، تأكد من أن الملفات المرفوعة هي صور صالحة."}), 400
 
 @app.route('/admin/delete_image/<cat_id>', methods=['POST'])
 def delete_image(cat_id):
