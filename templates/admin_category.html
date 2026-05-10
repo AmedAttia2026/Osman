@@ -9,6 +9,34 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        /* ستايل شريط التقدم للرفع */
+        .progress-bar-container {
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            height: 18px;
+            margin-top: 15px;
+            border: 1px solid var(--border);
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold) 0%, #ffe082 100%);
+            width: 0%;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 10px var(--gold-glow);
+        }
+        .upload-stats {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+        }
+        .upload-stats span.success { color: #10B981; }
+        .upload-stats span.fail { color: #EF4444; }
+    </style>
 </head>
 <body>
 
@@ -20,13 +48,16 @@
     <div class="admin-container">
         <div class="admin-card lux-card">
             <h3 class="card-heading"><i class="fas fa-upload"></i> إضافة صور للألبوم</h3>
-            <form method="POST" action="{{ url_for('upload_images', cat_id=cat_id) }}" enctype="multipart/form-data">
-                <div class="file-drop">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="file-drop" onclick="document.getElementById('fileInput').click()">
                     <i class="fas fa-images"></i>
-                    <p style="color:#fff; margin-top:10px;">حدد الصور لرفعها (تخزين سحابي مباشر)</p>
-                    <input type="file" name="files" accept="image/*" multiple required>
+                    <p style="color:#fff; margin-top:10px;">اضغط هنا لتحديد الصور (يدعم أي امتداد صورة)</p>
+                    <input type="file" id="fileInput" name="files" accept="image/*" multiple required hidden onchange="handleFilesSelect(this)">
+                    <div id="fileSelectedName" style="margin-top:10px; color:var(--gold); font-weight:bold;"></div>
                 </div>
-                <button type="submit" class="btn-gold" onclick="swalLoad()"><i class="fas fa-cloud-upload-alt"></i> رفع اللقطات</button>
+                <button type="submit" class="btn-gold" style="width:100%; margin-top:15px;">
+                    <i class="fas fa-cloud-upload-alt"></i> ابدأ رفع اللقطات الآن
+                </button>
             </form>
         </div>
 
@@ -54,7 +85,95 @@
     </div>
 
     <script>
-        function swalLoad() { Swal.fire({ title: 'جاري الرفع والسحب...', background: '#0d111a', color: '#fff', didOpen: () => { Swal.showLoading(); }}); }
+        function handleFilesSelect(input) {
+            const info = document.getElementById('fileSelectedName');
+            info.innerText = input.files.length > 0 ? `تم تحديد ${input.files.length} صور للرفع` : "";
+        }
+
+        document.getElementById('uploadForm').onsubmit = function(e) {
+            e.preventDefault();
+            const files = document.getElementById('fileInput').files;
+            const totalFiles = files.length;
+
+            if (totalFiles === 0) {
+                Swal.fire({ icon: 'warning', title: 'تنبيه', text: 'يرجى اختيار صور أولاً!', background: '#0d111a', color: '#fff' });
+                return;
+            }
+
+            let successCount = 0;
+            let failCount = 0;
+
+            // تجهيز واجهة الرفع
+            Swal.fire({
+                title: 'جاري الرفع والمعالجة...',
+                html: `
+                    <div style="text-align: right; color: var(--text-sub); font-size: 15px;">
+                        يتم الآن ختم ورفع الصور، برجاء عدم إغلاق الصفحة.
+                    </div>
+                    <div class="upload-stats">
+                        <span>التقدم: <b id="current-idx" style="color:var(--gold);">0</b> من ${totalFiles}</span>
+                        <span class="success">نجح: <b id="success-idx">0</b></span>
+                        <span class="fail">فشل: <b id="fail-idx">0</b></span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="progress-bar" class="progress-bar"></div>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                background: '#0d111a',
+                color: '#fff',
+                didOpen: async () => {
+                    Swal.showLoading();
+                    const currentIdxElem = document.getElementById('current-idx');
+                    const successIdxElem = document.getElementById('success-idx');
+                    const failIdxElem = document.getElementById('fail-idx');
+                    const progressBar = document.getElementById('progress-bar');
+
+                    // إرسال الصور صورة بصورة
+                    for (let i = 0; i < totalFiles; i++) {
+                        const formData = new FormData();
+                        formData.append('files', files[i]);
+
+                        try {
+                            const response = await fetch("{{ url_for('upload_images', cat_id=cat_id) }}", {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const result = await response.json();
+
+                            if (result.status === 'success') {
+                                successCount++;
+                            } else {
+                                failCount++;
+                            }
+                        } catch (error) {
+                            failCount++;
+                        }
+
+                        // تحديث الأرقام وشريط التقدم بعد كل صورة
+                        currentIdxElem.innerText = i + 1;
+                        successIdxElem.innerText = successCount;
+                        failIdxElem.innerText = failCount;
+                        
+                        const percentage = Math.round(((i + 1) / totalFiles) * 100);
+                        progressBar.style.width = percentage + '%';
+                    }
+
+                    // بعد انتهاء الحلقة (Loop) بالكامل
+                    Swal.fire({
+                        icon: successCount > 0 ? 'success' : (failCount > 0 ? 'error' : 'warning'),
+                        title: 'اكتملت العملية!',
+                        html: `تم الانتهاء من معالجة ${totalFiles} صورة.<br><br><span style="color:#10B981">نجح: ${successCount}</span> | <span style="color:#EF4444">فشل: ${failCount}</span>`,
+                        background: '#0d111a',
+                        color: '#fff',
+                        confirmButtonColor: '#FFB300'
+                    }).then(() => {
+                        location.reload(); // تحديث الصفحة لعرض الصور الجديدة
+                    });
+                }
+            });
+        };
 
         var el = document.getElementById('sortable-list');
         if (el && el.children.length > 0) {
@@ -82,16 +201,5 @@
             });
         }
     </script>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <script>
-          {% for category, message in messages %}
-            Swal.fire({ icon: '{{ "error" if category == "error" else "success" }}', title: '{{ message }}', background: '#0d111a', color: '#fff', confirmButtonColor: '#FFB300' });
-          {% endfor %}
-        </script>
-      {% endif %}
-    {% endwith %}
-
 </body>
 </html>
