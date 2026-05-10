@@ -26,7 +26,12 @@
         {% if cat_info.get('images') %}
             {% for image in cat_info['images'] %}
                 <div class="masonry-item" onclick="openLb('data:image/jpeg;base64,{{ image }}')">
-                    <img data-src="data:image/jpeg;base64,{{ image }}" class="lazy-image" alt="Ahmed Osman Photo">
+                    
+                    <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" 
+                         data-src="data:image/jpeg;base64,{{ image }}" 
+                         class="lazy-image" 
+                         alt="Ahmed Osman Photo" 
+                         loading="lazy">
                     
                     <div class="watermark-protection"></div>
                     
@@ -70,7 +75,9 @@
             document.body.classList.remove('blur-protect');
         });
 
-        // كود التحميل الذكي (Lazy Loading) للصور
+        // ========================================================
+        // سكريبت التحميل الذكي (Lazy Load) للصور واحدة بواحدة
+        // ========================================================
         document.addEventListener("DOMContentLoaded", function() {
             let lazyImages = [].slice.call(document.querySelectorAll("img.lazy-image"));
 
@@ -79,8 +86,14 @@
                     entries.forEach(function(entry) {
                         if (entry.isIntersecting) {
                             let lazyImage = entry.target;
+                            // استبدال الصورة الشفافة بالصورة الحقيقية
                             lazyImage.src = lazyImage.dataset.src;
-                            lazyImage.classList.add("loaded");
+                            
+                            // إعطاء تأثير النعومة عند انتهاء التحميل
+                            lazyImage.onload = function() {
+                                lazyImage.classList.add("loaded");
+                            };
+                            
                             lazyImageObserver.unobserve(lazyImage);
                         }
                     });
@@ -88,6 +101,12 @@
 
                 lazyImages.forEach(function(lazyImage) {
                     lazyImageObserver.observe(lazyImage);
+                });
+            } else {
+                // دعم للمتصفحات القديمة
+                lazyImages.forEach(function(lazyImage) {
+                    lazyImage.src = lazyImage.dataset.src;
+                    lazyImage.classList.add("loaded");
                 });
             }
         });
