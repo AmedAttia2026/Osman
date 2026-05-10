@@ -204,3 +204,17 @@ img {
     pointer-events: none;
     z-index: 5;
 }
+
+/* =========================================================
+   تأثير التحميل الذكي (Lazy Load) للصور
+   ========================================================= */
+.lazy-image {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+}
+
+.lazy-image.loaded {
+    opacity: 1;
+    transform: scale(1);
+}
