@@ -19,7 +19,7 @@
                     <i class="fas fa-camera-retro login-icon"></i>
                 </div>
                 <h2 class="login-title">Studio Access</h2>
-                <p class="login-sub">Ahmed Othman Portal</p>
+                <p class="login-sub">Ahmed Osman Portal</p>
             </div>
             
             <form id="loginForm" onsubmit="handleLogin(event)">
@@ -74,7 +74,6 @@
                 const data = await response.json();
                 
                 if (response.ok && data.status === 'success') {
-                    // تم تقليل وقت الانتظار هنا لسرعة الدخول الفوري
                     Swal.fire({ icon: 'success', title: 'Welcome Admin!', background: '#0d111a', color: '#fff', showConfirmButton: false, timer: 400 })
                     .then(() => { window.location.href = "{{ url_for('admin') }}"; });
                 } else {
