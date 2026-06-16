@@ -119,12 +119,12 @@ def category_view(cat_id):
 
 @app.route('/api/category_images/<cat_id>')
 def get_category_images_api(cat_id):
-    """جلب مباشر لصورة واحدة فقط من قاعدة البيانات باستخدام الفهرس فوري وبدون أي معالجة"""
+    """جلب فوري فائق السرعة عبر تقنية Direct Array Slicing اللحظية"""
     try:
         page = int(request.args.get('page', 1))
-        index_pos = page - 1 # تحديد موقع الصورة المطلوبة بدقة
+        index_pos = page - 1
         
-        # استخدام $slice لجلب كود الصورة المطلوبة فقط من مستند MongoDB دون تحميل باقي المصفوفة
+        # استخدام إسقاط المخطط الفرعي لجلب مصفوفة فرعية بحجم عنصر واحد فوريّاً بدون لود
         cat_info = categories_col.find_one(
             {"_id": cat_id}, 
             {"images": {"$slice": [index_pos, 1]}}
@@ -133,8 +133,6 @@ def get_category_images_api(cat_id):
         if not cat_info or 'images' not in cat_info or len(cat_info['images']) == 0:
             return jsonify({"status": "success", "images": [], "has_more": False})
             
-        # التحقق الخفيف جداً من وجود المزيد عبر مقارنة العدد الإجمالي المتوقع
-        # (لتجنب الحساب المستمر تم الاكتفاء بمعرفة النتيجة مباشرة من محاولة الجلب)
         return jsonify({
             "status": "success",
             "images": [cat_info['images'][0]],
