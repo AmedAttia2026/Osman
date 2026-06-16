@@ -85,7 +85,7 @@ body { background: var(--bg-main); color: var(--text-main); display: flex; flex-
 @media (max-width: 500px) { .masonry-grid { column-count: 1; } }
 
 .masonry-item { break-inside: avoid; margin-bottom: 15px; border-radius: 12px; overflow: hidden; cursor: pointer; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.5); background-color: rgba(255, 255, 255, 0.03); min-height: 150px;}
-.masonry-item img { width: 100%; display: block; transition: 0.4s;}
+.masonry-item img { width: 100%; display: block; opacity: 1 !important; transition: 0.4s;}
 .zoom-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; opacity: 0; transition: 0.3s; color: var(--gold); font-size: 2rem;}
 .masonry-item:hover .zoom-overlay { opacity: 1; }
 .masonry-item:hover img { transform: scale(1.05); }
@@ -154,7 +154,7 @@ body { background: var(--bg-main); color: var(--text-main); display: flex; flex-
 .btn-del-circle { width: 45px; height: 45px; border-radius: 50%; background: rgba(239,68,68,0.2); color: #EF4444; border: 1px solid #EF4444; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; transition: 0.3s; padding: 0; }
 .btn-del-circle:hover { background: #EF4444; color: #fff; transform: scale(1.1); }
 
-.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 99999; justify-content: center; align-items: center; backdrop-filter: blur(10px);}
+.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 99999; justify-content: center; align-items: center;}
 .lightbox img { max-width: 95%; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 40px #000; animation: zoom 0.3s ease; }
 .close-lb { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 40px; cursor: pointer; z-index: 1000;}
 @keyframes zoom { from {transform: scale(0.9); opacity:0;} to {transform: scale(1); opacity:1;} }
@@ -183,11 +183,6 @@ img {
     pointer-events: auto;
 }
 
-.blur-protect {
-    filter: blur(15px) !important;
-    transition: 0.1s;
-}
-
 .watermark-protection {
     position: absolute;
     inset: 0;
@@ -197,16 +192,4 @@ img {
     background-size: 70%;
     pointer-events: none;
     z-index: 5;
-}
-
-/* =========================================================
-   تأثير التحميل الذكي (Lazy Load) للصور 
-   ========================================================= */
-.lazy-image {
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-}
-
-.lazy-image.loaded {
-    opacity: 1;
 }
