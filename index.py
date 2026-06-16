@@ -86,8 +86,8 @@ def add_watermark_and_encode(file_storage):
         text_width, text_height = draw.textsize(text, font=font)
         
     # --- إعدادات الهوامش (Margins) ---
-    margin_x = width * 0.03 # هامش 3% من العرض
-    margin_y = height * 0.03 # هامش 3% من الارتفاع
+    margin_x = width * 0.03 
+    margin_y = height * 0.03 
     
     # الختم الوحيد: في الزاوية السفلية اليمنى (Bottom-Right)
     x = width - text_width - margin_x
@@ -107,6 +107,7 @@ def add_watermark_and_encode(file_storage):
 # ==========================================
 @app.route('/')
 def index():
+    # استثناء مصفوفة الصور بالكامل من الواجهة الرئيسية لزيادة سرعة التحميل القصوى
     categories = list(categories_col.find({}, {"images": 0}))
     return render_template('index.html', categories=categories, banner=get_main_banner())
 
