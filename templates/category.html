@@ -7,6 +7,34 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* أنيميشن فوري فائق النعومة والخفة لسرعة العرض */
+        .masonry-item {
+            opacity: 0;
+            transform: translateY(15px);
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+        }
+        .masonry-item.reveal-now {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* مؤشر تدفق فخم وصغير لا يسبب أي بطء */
+        .fast-stream-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: rgba(13, 17, 26, 0.85);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .fast-spin {
+            animation: fa-spin 0.8s linear infinite;
+            color: var(--gold);
+        }
+    </style>
 </head>
 <body>
 
@@ -22,26 +50,15 @@
         <a href="{{ url_for('index') }}" class="btn-back-nav"><i class="fas fa-arrow-right"></i> رجوع</a>
     </nav>
 
-    <main class="masonry-grid">
-        {% if cat_info.get('images') %}
-            {% for image in cat_info['images'] %}
-                <div class="masonry-item" onclick="openLb('data:image/jpeg;base64,{{ image }}')">
-                    
-                    <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" 
-                         data-src="data:image/jpeg;base64,{{ image }}" 
-                         class="lazy-image" 
-                         alt="Ahmed Osman Photo" 
-                         loading="lazy">
-                    
-                    <div class="watermark-protection"></div>
-                    
-                    <div class="zoom-overlay"><i class="fas fa-search-plus"></i></div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <p style="text-align:center; color:var(--text-sub); margin-top:50px;">لا توجد صور حالياً في هذا الألبوم.</p>
-        {% endif %}
-    </main>
+    <main class="masonry-grid" id="masonry-gallery">
+        </main>
+
+    <div id="loading-indicator" style="text-align: center; padding: 20px; display: none; width: 100%; position: fixed; bottom: 15px; left: 0; z-index: 9999;">
+        <div class="fast-stream-badge">
+            <i class="fas fa-circle-notch fast-spin"></i>
+            <span style="color: #fff; font-size: 11px; font-weight: bold;">اتصال مباشر...</span>
+        </div>
+    </div>
 
     <div id="lightbox" class="lightbox" onclick="this.style.display='none'">
         <span class="close-lb">&times;</span>
@@ -76,39 +93,74 @@
         });
 
         // ========================================================
-        // سكريبت التحميل الذكي (Lazy Load) للصور واحدة بواحدة
+        // محرك التدفق الخاطف الفوري (Instantaneous Stream Engine)
         // ========================================================
-        document.addEventListener("DOMContentLoaded", function() {
-            let lazyImages = [].slice.call(document.querySelectorAll("img.lazy-image"));
+        const catId = "{{ cat_id }}";
+        let currentPage = 1;
+        let isFetching = false;
+        let hasMore = true;
+        
+        const galleryContainer = document.getElementById('masonry-gallery');
+        const loadingIndicator = document.getElementById('loading-indicator');
 
-            if ("IntersectionObserver" in window) {
-                let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
-                    entries.forEach(function(entry) {
-                        if (entry.isIntersecting) {
-                            let lazyImage = entry.target;
-                            // استبدال الصورة الشفافة بالصورة الحقيقية
-                            lazyImage.src = lazyImage.dataset.src;
-                            
-                            // إعطاء تأثير النعومة عند انتهاء التحميل
-                            lazyImage.onload = function() {
-                                lazyImage.classList.add("loaded");
-                            };
-                            
-                            lazyImageObserver.unobserve(lazyImage);
-                        }
-                    });
-                });
+        async function triggerInstantStream() {
+            if (isFetching || !hasMore) return;
+            
+            isFetching = true;
+            loadingIndicator.style.display = 'block';
 
-                lazyImages.forEach(function(lazyImage) {
-                    lazyImageObserver.observe(lazyImage);
-                });
-            } else {
-                // دعم للمتصفحات القديمة
-                lazyImages.forEach(function(lazyImage) {
-                    lazyImage.src = lazyImage.dataset.src;
-                    lazyImage.classList.add("loaded");
-                });
+            try {
+                // استدعاء فوري لصورة فردية بحجم طفيف للغاية لا يستغرق وقت عبر الشبكة
+                const response = await fetch(`/api/category_images/${catId}?page=${currentPage}&per_page=1`);
+                const data = await response.json();
+
+                if (data.status === 'success' && data.images && data.images.length > 0) {
+                    const base64Src = `data:image/jpeg;base64,${data.images[0]}`;
+                    
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'masonry-item';
+                    itemDiv.onclick = () => openLb(base64Src);
+
+                    itemDiv.innerHTML = `
+                        <img src="${base64Src}" class="lazy-image loaded" alt="Ahmed Osman Photo">
+                        <div class="watermark-protection"></div>
+                        <div class="zoom-overlay"><i class="fas fa-search-plus"></i></div>
+                    `;
+                    
+                    galleryContainer.appendChild(itemDiv);
+                    
+                    // ظهور فوري ومباشر على الشاشة بدون تأثيرات معقدة تستهلك المعالج
+                    itemDiv.classList.add('reveal-now');
+
+                    currentPage++;
+                    isFetching = false; // فتح القفل فوراً دون أي انتظار
+
+                    // تفقد فوري: إذا كان ارتفاع محتوى الألبوم الحالي لم يملأ الشاشة بالكامل، اطلب التالية فوراً بعد 10 مللي ثانية فقط
+                    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 700) {
+                        setTimeout(triggerInstantStream, 10);
+                    }
+                } else {
+                    hasMore = false;
+                    loadingIndicator.style.display = 'none';
+                }
+            } catch (error) {
+                console.error("خطأ بالتدفق المستمر الفوري:", error);
+                isFetching = false;
             }
+        }
+
+        // استدعاء سلس فوري بمجرد بدء التمرير لأسفل مباشرة
+        window.addEventListener('scroll', () => {
+            if (hasMore && !isFetching) {
+                if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 600) {
+                    triggerInstantStream();
+                }
+            }
+        });
+
+        // تشغيل التدفق اللحظي فورا عند تحميل الصفحة
+        document.addEventListener("DOMContentLoaded", function() {
+            triggerInstantStream();
         });
     </script>
 </body>
