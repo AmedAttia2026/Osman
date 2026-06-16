@@ -112,10 +112,36 @@ def index():
 
 @app.route('/category/<cat_id>')
 def category_view(cat_id):
-    cat_info = categories_col.find_one({"_id": cat_id})
+    cat_info = categories_col.find_one({"_id": cat_id}, {"images": 0})
     if not cat_info:
         return redirect(url_for('index'))
     return render_template('category.html', cat_id=cat_id, cat_info=cat_info, banner=get_main_banner())
+
+@app.route('/api/category_images/<cat_id>')
+def get_category_images_api(cat_id):
+    """جلب مباشر لصورة واحدة فقط من قاعدة البيانات باستخدام الفهرس فوري وبدون أي معالجة"""
+    try:
+        page = int(request.args.get('page', 1))
+        index_pos = page - 1 # تحديد موقع الصورة المطلوبة بدقة
+        
+        # استخدام $slice لجلب كود الصورة المطلوبة فقط من مستند MongoDB دون تحميل باقي المصفوفة
+        cat_info = categories_col.find_one(
+            {"_id": cat_id}, 
+            {"images": {"$slice": [index_pos, 1]}}
+        )
+        
+        if not cat_info or 'images' not in cat_info or len(cat_info['images']) == 0:
+            return jsonify({"status": "success", "images": [], "has_more": False})
+            
+        # التحقق الخفيف جداً من وجود المزيد عبر مقارنة العدد الإجمالي المتوقع
+        # (لتجنب الحساب المستمر تم الاكتفاء بمعرفة النتيجة مباشرة من محاولة الجلب)
+        return jsonify({
+            "status": "success",
+            "images": [cat_info['images'][0]],
+            "has_more": True
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # ==========================================
 # 2. نظام تسجيل الدخول
