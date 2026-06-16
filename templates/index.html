@@ -49,14 +49,6 @@
             if (e.ctrlKey && e.keyCode === 80) { e.preventDefault(); }
             if (e.ctrlKey && e.keyCode === 67) { e.preventDefault(); }
         });
-
-        window.addEventListener('blur', function() {
-            document.body.classList.add('blur-protect');
-        });
-
-        window.addEventListener('focus', function() {
-            document.body.classList.remove('blur-protect');
-        });
     </script>
 </body>
 </html>
