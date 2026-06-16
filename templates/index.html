@@ -3,69 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>{{ cat_info['name'] }} | Ahmed Osman</title>
+    <title>Ahmed Osman | Photographer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* كود حقن وعرض لحظي بدون أي تأثيرات تأخير جانية للوصول للسرعة القصوى */
-        .masonry-item {
-            opacity: 0;
-            transition: opacity 0.15s ease-out;
-        }
-        .masonry-item.reveal-now {
-            opacity: 1;
-        }
-        .fast-stream-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            background: rgba(13, 17, 26, 0.85);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            backdrop-filter: blur(4px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .fast-spin {
-            animation: fa-spin 0.5s linear infinite;
-            color: var(--gold);
-        }
-    </style>
 </head>
 <body>
 
-    <header class="top-banner" style="height: 25vh; min-height: 180px; {% if banner %} background-image: url('data:image/jpeg;base64,{{ banner }}'); {% endif %}">
+    <header class="top-banner" {% if banner %} style="background-image: url('data:image/jpeg;base64,{{ banner }}');" {% endif %}>
         <div class="banner-text-container">
             <span class="banner-subtitle">Photographer</span>
-            <div class="banner-title" style="font-size: clamp(1.8rem, 6vw, 3.5rem);">Ahmed Osman</div>
+            <div class="banner-title">Ahmed Osman</div>
         </div>
     </header>
 
-    <nav class="nav-bar">
-        <h1 class="nav-title">{{ cat_info['name'] }}</h1>
-        <a href="{{ url_for('index') }}" class="btn-back-nav"><i class="fas fa-arrow-right"></i> رجوع</a>
-    </nav>
-
-    <main class="masonry-grid" id="masonry-gallery">
-        </main>
-
-    <div id="loading-indicator" style="text-align: center; padding: 20px; display: none; width: 100%; position: fixed; bottom: 15px; left: 0; z-index: 9999;">
-        <div class="fast-stream-badge">
-            <i class="fas fa-circle-notch fast-spin"></i>
-            <span style="color: #fff; font-size: 11px; font-weight: bold;">مزامنة قصوى...</span>
-        </div>
-    </div>
-
-    <div id="lightbox" class="lightbox" onclick="this.style.display='none'">
-        <span class="close-lb">&times;</span>
-        <img id="lb-img" onclick="event.stopPropagation()">
-        <div class="watermark-protection" style="z-index: 100000; position: absolute; inset: 0;"></div>
-    </div>
+    <main class="cat-grid">
+        {% for cat in categories %}
+            <a href="{{ url_for('category_view', cat_id=cat['_id']) }}" class="cat-card">
+                <img src="data:image/jpeg;base64,{{ cat['cover_base64'] }}" alt="{{ cat['name'] }}">
+                <div class="cat-content">
+                    <h2>{{ cat['name'] }}</h2>
+                    <span>شاهد الألبوم</span>
+                </div>
+            </a>
+        {% endfor %}
+        
+        {% if not categories %}
+            <div style="grid-column: 1/-1; text-align:center; padding: 50px; color: var(--text-sub);">
+                <h2>المعرض قيد التجهيز...</h2>
+            </div>
+        {% endif %}
+    </main>
 
     <script>
-        function openLb(src) { document.getElementById('lightbox').style.display = 'flex'; document.getElementById('lb-img').src = src; }
-
         document.addEventListener('contextmenu', event => event.preventDefault());
 
         document.addEventListener('keydown', function(e) {
@@ -87,90 +56,6 @@
 
         window.addEventListener('focus', function() {
             document.body.classList.remove('blur-protect');
-        });
-
-        // ========================================================
-        // محرك التدفق العنقودي المتوازي اللانهائي (Parallel Cluster Pipeline Engine)
-        // ========================================================
-        const catId = "{{ cat_id }}";
-        let nextIndexToFetch = 1; 
-        let activeConnections = 0;
-        const maxParallelRequests = 4; // فتح 4 قنوات اتصال متزامنة للحصول على سرعة البرق الخاطفة
-        let hasMore = true;
-        
-        const galleryContainer = document.getElementById('masonry-gallery');
-        const loadingIndicator = document.getElementById('loading-indicator');
-
-        async function fetchSingleImageWorker() {
-            if (!hasMore || activeConnections >= maxParallelRequests) return;
-            
-            const currentJobIndex = nextIndexToFetch;
-            nextIndexToFetch++;
-            activeConnections++;
-            loadingIndicator.style.display = 'block';
-
-            try {
-                const response = await fetch(`/api/category_images/${catId}?page=${currentJobIndex}&per_page=1`);
-                const data = await response.json();
-
-                if (data.status === 'success' && data.images && data.images.length > 0) {
-                    const base64Src = `data:image/jpeg;base64,${data.images[0]}`;
-                    
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'masonry-item';
-                    itemDiv.onclick = () => openLb(base64Src);
-
-                    itemDiv.innerHTML = `
-                        <img src="${base64Src}" class="lazy-image loaded" alt="Ahmed Osman Photo">
-                        <div class="watermark-protection"></div>
-                        <div class="zoom-overlay"><i class="fas fa-search-plus"></i></div>
-                    `;
-                    
-                    galleryContainer.appendChild(itemDiv);
-                    
-                    // إظهار فوري وعرض خاطف دون تجميد المتصفح
-                    requestAnimationFrame(() => {
-                        itemDiv.classList.add('reveal-now');
-                    });
-
-                    activeConnections--; // إخلاء القناة المنجزة
-                    
-                    // تحفيز تفرعي فوري: اطلب الصورة التالية فوراً لملء الشاشة أو التصفح التلقائي
-                    if (hasMore && (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 900)) {
-                        runClusterPipeline();
-                    }
-                } else {
-                    hasMore = false;
-                    activeConnections--;
-                    if (activeConnections === 0) loadingIndicator.style.display = 'none';
-                }
-            } catch (error) {
-                console.error("خطأ بقناة التدفق المتوازية:", error);
-                activeConnections--;
-                if (activeConnections === 0) loadingIndicator.style.display = 'none';
-            }
-        }
-
-        // تشغيل خطوط الأنابيب المتوازية لضمان التدفق الأقصى بدون توقف
-        function runClusterPipeline() {
-            if (!hasMore) return;
-            while (activeConnections < maxParallelRequests && hasMore) {
-                fetchSingleImageWorker();
-            }
-        }
-
-        // استجابة فورية عند التمرير لأسفل الصفحة
-        window.addEventListener('scroll', () => {
-            if (hasMore && activeConnections < maxParallelRequests) {
-                if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 800) {
-                    runClusterPipeline();
-                }
-            }
-        });
-
-        // إطلاق محرك التدفق العنقودي فورا عند تحميل الصفحة لتعبئة الشاشة بلمح البصر
-        document.addEventListener("DOMContentLoaded", function() {
-            runClusterPipeline();
         });
     </script>
 </body>
